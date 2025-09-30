@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, setAuthFromStorage } from './redux/auth/authSlice';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
+import MeetingRoomsDashboard from './components/MeetingRoomsDashboard';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 
 const ProtectedRoute = ({ children }) => {
@@ -23,14 +24,26 @@ const BookingDashboard = () => {
             <Typography variant="h6" className="text-gray-700 mb-6">
                 Ви успішно авторизовані. Доступ до системи бронювання відкрито.
             </Typography>
-            <Button
-                variant="contained"
-                color="error"
-                onClick={() => dispatch(logout())}
-                className="mt-4"
-            >
-                Вийти
-            </Button>
+
+            <Box className="flex justify-center space-x-4">
+                <Button
+                    variant="contained"
+                    color="success"
+                    component={Link}
+                    to="/rooms"
+                    className="mt-4"
+                >
+                    Керування Кімнатами
+                </Button>
+                <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => dispatch(logout())}
+                    className="mt-4"
+                >
+                    Вийти
+                </Button>
+            </Box>
         </div>
     );
 };
@@ -62,7 +75,11 @@ export default function App() {
                                 <Button color="inherit" href="/register">Реєстрація</Button>
                             </>
                         ) : (
-                            <Button color="inherit" onClick={() => dispatch(logout())}>Вихід</Button>
+                            <>
+                                <Button color="inherit" component={Link} to="/dashboard">Дашборд</Button>
+                                <Button color="inherit" component={Link} to="/rooms">Кімнати</Button>
+                                <Button color="inherit" onClick={() => dispatch(logout())}>Вихід</Button>
+                            </>
                         )}
                     </Box>
                 </Toolbar>
@@ -73,12 +90,20 @@ export default function App() {
                     <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginForm />} />
                     <Route path="/register" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <RegisterForm />} />
 
-                    {/* Захищений маршрут */}
                     <Route
                         path="/dashboard"
                         element={
                             <ProtectedRoute>
                                 <BookingDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/rooms"
+                        element={
+                            <ProtectedRoute>
+                                <MeetingRoomsDashboard />
                             </ProtectedRoute>
                         }
                     />
