@@ -1,33 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { useAuth } from '../hooks/useAuth.js';
 import {
     TextField, Button, Typography, Container, Alert, CircularProgress,
     FormControlLabel, Checkbox, Box
 } from '@mui/material';
 
-import { useRegisterForm } from './useRegisterForm';
-
 export default function RegisterForm() {
-    const {
-        name, setName,
-        email, setEmail,
-        password, setPassword,
-        confirmPassword, setConfirmPassword,
-        isAdmin, setIsAdmin,
-        loadingStatus,
-        error,
-        handleSubmit
-    } = useRegisterForm();
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    const { loadingStatus, error, register } = useAuth();
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const role = isAdmin ? 'Admin' : 'User';
+        register({ name, email, password, confirmPassword, role });
+    };
 
     return (
-        <Container component="main" maxWidth="xs" className="mt-10 p-6 bg-white shadow-xl rounded-lg">
+        <Container component="main" maxWidth="xs" className="mt-16 p-9 bg-white shadow-xl rounded-xl">
             <div className="flex flex-col items-center">
-                <Typography component="h1" variant="h5" className="mb-6 text-gray-800">
+                <Typography component="h1" variant="h5" className="mb-9 text-gray-800">
                     Реєстрація Користувача
                 </Typography>
 
-                {error && <Alert severity="error" className="w-full mb-4">{error}</Alert>}
+                {error && <Alert severity="error" className="w-full mb-7">{error}</Alert>}
 
-                <form className="w-full space-y-4" onSubmit={handleSubmit}>
+                <form className="w-full space-y-6" onSubmit={handleSubmit}>
                     <TextField
                         label="Ваше Ім'я"
                         variant="outlined"
@@ -64,7 +67,7 @@ export default function RegisterForm() {
                         type="password"
                     />
 
-                    <Box className="flex justify-start w-full">
+                    <Box className="flex justify-start w-full mt-2">
                         <FormControlLabel
                             control={
                                 <Checkbox

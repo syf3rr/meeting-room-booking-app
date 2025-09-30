@@ -1,31 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useSelector } from "react-redux";
+import { useAuth } from '../hooks/useAuth.js';
 import { TextField, Button, Typography, Container, Alert, CircularProgress } from '@mui/material';
-import { useLoginForm } from './useLoginForm';
 
 export default function LoginForm() {
-    const {
-        email,
-        setEmail,
-        password,
-        setPassword,
-        loadingStatus,
-        error,
-        handleSubmit
-    } = useLoginForm();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const { loadingStatus, error, login } = useAuth();
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        login({ email, password });
+    };
 
     return (
-        <Container component="main" maxWidth="xs" className="mt-10 p-6 bg-white shadow-xl rounded-lg">
+        <Container component="main" maxWidth="xs" className="mt-16 p-9 bg-white shadow-xl rounded-xl">
             <div className="flex flex-col items-center">
-                <Typography component="h1" variant="h5" className="mb-4 text-gray-800">
+                <Typography component="h1" variant="h5" className="mb-7 text-gray-800">
                     Вхід у систему
                 </Typography>
-                <Typography variant="body2" color="textSecondary" className="mb-6">
+                <Typography variant="body2" color="textSecondary" className="mb-9">
                     Тестовий вхід
                 </Typography>
 
-                {error && <Alert severity="error" className="w-full mb-4">{error}</Alert>}
+                {error && <Alert severity="error" className="w-full mb-7">{error}</Alert>}
 
-                <form className="w-full space-y-4" onSubmit={handleSubmit}>
+                <form className="w-full space-y-6" onSubmit={handleSubmit}>
                     <TextField
                         label="Email"
                         variant="outlined"
@@ -49,7 +49,7 @@ export default function LoginForm() {
                         fullWidth
                         variant="contained"
                         color="primary"
-                        className="h-12 text-lg font-bold"
+                        className="h-12 text-lg font-bold mt-2"
                         disabled={loadingStatus === 'loading'}
                     >
                         {loadingStatus === 'loading' ? <CircularProgress size={24} color="inherit" /> : 'Увійти'}
