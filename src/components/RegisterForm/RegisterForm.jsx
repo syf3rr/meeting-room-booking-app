@@ -1,34 +1,22 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { registerUser } from '../redux/auth/authSlice';
+import React from 'react';
 import {
     TextField, Button, Typography, Container, Alert, CircularProgress,
     FormControlLabel, Checkbox, Box
 } from '@mui/material';
 
+import { useRegisterForm } from './useRegisterForm';
+
 export default function RegisterForm() {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isAdmin, setIsAdmin] = useState(false);
-
-    const dispatch = useDispatch();
-    const { loadingStatus, error } = useSelector(state => state.auth);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (loadingStatus === 'loading') return;
-
-        if (password !== confirmPassword) {
-            alert('Паролі не співпадають!');
-            return;
-        }
-
-        const role = isAdmin ? 'Admin' : 'User';
-
-        dispatch(registerUser({ name, email, password, role }));
-    };
+    const {
+        name, setName,
+        email, setEmail,
+        password, setPassword,
+        confirmPassword, setConfirmPassword,
+        isAdmin, setIsAdmin,
+        loadingStatus,
+        error,
+        handleSubmit
+    } = useRegisterForm();
 
     return (
         <Container component="main" maxWidth="xs" className="mt-10 p-6 bg-white shadow-xl rounded-lg">

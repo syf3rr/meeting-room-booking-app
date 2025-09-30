@@ -1,21 +1,17 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from "react-redux";
-import { loginUser } from '../redux/auth/authSlice';
+import React from 'react';
 import { TextField, Button, Typography, Container, Alert, CircularProgress } from '@mui/material';
+import { useLoginForm } from './useLoginForm';
 
 export default function LoginForm() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const dispatch = useDispatch();
-    const { loadingStatus, error } = useSelector(state => state.auth);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (loadingStatus !== 'loading') {
-            console.log("Дані з форми:", { email, password });
-            dispatch(loginUser({ email, password }));
-        }
-    };
+    const {
+        email,
+        setEmail,
+        password,
+        setPassword,
+        loadingStatus,
+        error,
+        handleSubmit
+    } = useLoginForm();
 
     return (
         <Container component="main" maxWidth="xs" className="mt-10 p-6 bg-white shadow-xl rounded-lg">

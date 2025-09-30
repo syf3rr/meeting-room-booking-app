@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, setAuthFromStorage } from './redux/auth/authSlice';
-import LoginForm from './components/LoginForm';
-import RegisterForm from './components/RegisterForm';
-import MeetingRoomsDashboard from './components/MeetingRoomsDashboard';
+import LoginForm from './components/LoginForm/LoginForm.jsx';
+import RegisterForm from './components/RegisterForm/RegisterForm.jsx';
+import MeetingRoomsDashboard from './components/MeetingRoomsDashboard/MeetingRoomsDashboard.jsx';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 
 const ProtectedRoute = ({ children }) => {
