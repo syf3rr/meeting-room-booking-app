@@ -64,11 +64,12 @@ export default function App() {
     return (
         <Router>
             <AppBar position="static" className="bg-blue-600">
-                <Toolbar>
-                    <Typography variant="h6" className="flex-grow">
+                <Toolbar className="w-full flex items-center">
+                    <Box className="flex-1" />
+                    <Typography variant="h6" className="flex-1 text-center">
                         Meeting Room Booking App
                     </Typography>
-                    <Box className="space-x-4">
+                    <Box className="flex-1 flex justify-end space-x-4">
                         {!isLoggedIn ? (
                             <>
                                 <Button color="inherit" href="/login">Вхід</Button>

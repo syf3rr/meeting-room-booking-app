@@ -23,7 +23,7 @@ export default function RegisterForm() {
 
     return (
         <Container component="main" maxWidth="xs" className="mt-16 p-9 bg-white shadow-xl rounded-xl">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center text-center">
                 <Typography component="h1" variant="h5" className="mb-9 text-gray-800">
                     Реєстрація Користувача
                 </Typography>
@@ -38,6 +38,8 @@ export default function RegisterForm() {
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        margin="normal"
+                        className="mb-4"
                     />
                     <TextField
                         label="Email"
@@ -47,6 +49,8 @@ export default function RegisterForm() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         type="email"
+                        margin="normal"
+                        className="mb-4"
                     />
                     <TextField
                         label="Пароль"
@@ -56,6 +60,8 @@ export default function RegisterForm() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         type="password"
+                        margin="normal"
+                        className="mb-4"
                     />
                     <TextField
                         label="Підтвердіть Пароль"
@@ -65,9 +71,11 @@ export default function RegisterForm() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         type="password"
+                        margin="normal"
+                        className="mb-6"
                     />
 
-                    <Box className="flex justify-start w-full mt-2">
+                    <Box className="flex justify-start w-full mt-2 mb-4">
                         <FormControlLabel
                             control={
                                 <Checkbox

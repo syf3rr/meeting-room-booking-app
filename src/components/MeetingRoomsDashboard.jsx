@@ -96,7 +96,7 @@ export default function MeetingRoomsDashboard() {
 
     return (
         <Container component="main" maxWidth="xl" className="mt-14 p-8">
-            <Box className="flex justify-between items-center mb-10">
+            <Box className="flex flex-col items-center gap-4 mb-10 text-center">
                 <Typography variant="h4" component="h1" className="text-gray-800 font-semibold">
                     Панель Керування Кімнатами
                 </Typography>
@@ -121,7 +121,7 @@ export default function MeetingRoomsDashboard() {
                 </Box>
             )}
 
-            <Grid container spacing={5}>
+            <Grid container spacing={5} justifyContent="center">
                 {rooms.map((room) => {
                     const roomBookings = bookings.filter(b => b.roomId === room.id);
                     return (
