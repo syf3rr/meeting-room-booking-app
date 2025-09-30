@@ -1,24 +1,41 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-const initialRooms = [
-    { id: 'r1', name: 'Кімната 1', description: 'Головна переговорна, 12 місць, проектор', capacity: 12 },
-    { id: 'r2', name: 'Кімната 2', description: 'Мала кімната, 4 місця, ідеально для one-to-one', capacity: 4 },
-    { id: 'r3', name: 'Кімната 3', description: 'Для командних зустрічей, 8 місць, дошка', capacity: 8 },
-];
+const ROOMS_STORAGE_KEY = 'meeting_rooms_data';
 
-let nextRoomId = 4;
-
-const initialState = {
-    rooms: initialRooms,
-    loadingStatus: 'idle',
-    error: null,
+const loadRooms = () => {
+    try {
+        const serializedState = localStorage.getItem(ROOMS_STORAGE_KEY);
+        if (serializedState === null) {
+            return [
+                { id: 'r1', name: 'Кімната 1', description: 'Головна переговорна, 12 місць, проектор', capacity: 12 },
+                { id: 'r2', name: 'Кімната 2', description: 'Мала кімната, 4 місця, ідеально для one-to-one', capacity: 4 },
+                { id: 'r3', name: 'Кімната 3', description: 'Для командних зустрічей, 8 місць, дошка', capacity: 8 },
+            ];
+        }
+        return JSON.parse(serializedState);
+    } catch (e) {
+        console.warn("Could not load rooms state from localStorage:", e);
+        return [];
+    }
 };
+
+const saveRooms = (rooms) => {
+    try {
+        const serializedState = JSON.stringify(rooms);
+        localStorage.setItem(ROOMS_STORAGE_KEY, serializedState);
+    } catch (e) {
+        console.error("Could not save rooms state to localStorage:", e);
+    }
+};
+
+let initialRoomsState = loadRooms();
+let nextRoomId = initialRoomsState.length > 0 ? (Math.max(...initialRoomsState.map(r => parseInt(r.id.substring(1)))) + 1) : 1;
 
 export const fetchRooms = createAsyncThunk(
     'rooms/fetchRooms',
     async () => {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Імітація затримки
-        return initialRooms;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return loadRooms();
     }
 );
 
@@ -26,23 +43,30 @@ export const createRoom = createAsyncThunk(
     'rooms/createRoom',
     async (roomData) => {
         await new Promise(resolve => setTimeout(resolve, 500));
-        const newRoom = {
-            id: 'r' + nextRoomId++,
-            ...roomData,
-            capacity: Number(roomData.capacity) || 0,
-        };
+        const newRoom = { ...roomData, id: `r${nextRoomId++}`, capacity: Number(roomData.capacity) };
+
+        const currentRooms = loadRooms();
+        currentRooms.push(newRoom);
+        saveRooms(currentRooms);
+
         return newRoom;
     }
 );
 
 export const updateRoom = createAsyncThunk(
     'rooms/updateRoom',
-    async (roomData, { rejectWithValue }) => {
+    async (updatedRoom) => {
         await new Promise(resolve => setTimeout(resolve, 500));
-        if (!roomData.id) {
-            return rejectWithValue("Не вдалося знайти ID кімнати для оновлення.");
+
+        const rooms = loadRooms();
+        const index = rooms.findIndex(r => r.id === updatedRoom.id);
+        if (index !== -1) {
+            const updated = { ...updatedRoom, capacity: Number(updatedRoom.capacity) };
+            rooms[index] = updated;
+            saveRooms(rooms);
+            return updated;
         }
-        return { ...roomData, capacity: Number(roomData.capacity) || 0 };
+        throw new Error('Кімнату не знайдено.');
     }
 );
 
@@ -50,13 +74,25 @@ export const deleteRoom = createAsyncThunk(
     'rooms/deleteRoom',
     async (roomId) => {
         await new Promise(resolve => setTimeout(resolve, 500));
-        return roomId;
+
+        const rooms = loadRooms();
+        const updatedRooms = rooms.filter(r => r.id !== roomId);
+
+        if (updatedRooms.length < rooms.length) {
+            saveRooms(updatedRooms);
+            return roomId;
+        }
+        throw new Error('Кімнату не знайдено.');
     }
 );
 
 const roomsSlice = createSlice({
     name: 'rooms',
-    initialState,
+    initialState: {
+        rooms: initialRoomsState,
+        loadingStatus: 'idle',
+        error: null,
+    },
     reducers: {},
     extraReducers: (builder) => {
         builder

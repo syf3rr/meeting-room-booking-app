@@ -17,46 +17,58 @@ const formatDateTime = (isoString) => {
 };
 
 const initialRoomState = { id: null, name: '', description: '', capacity: '' };
-const initialBookingState = { id: null, roomId: null, title: '', description: '', startTime: '', endTime: '', userName: '' };
+const initialBookingState = { id: null, roomId: null, title: '', description: '', startTime: '', endTime: '', userName: '', participants: [] };
 
 function BookingFormDialog({ open, handleClose, booking, roomId, userName }) {
     const dispatch = useDispatch();
+    const { user } = useSelector(state => state.auth);
+    const isAdmin = user?.role === 'Admin';
     const isNew = !booking.id;
+
     const initialFormData = {
         roomId: booking.roomId || roomId,
         title: booking.title || '',
         description: booking.description || '',
         startTime: booking.startTime ? booking.startTime.substring(0, 16) : '',
         endTime: booking.endTime ? booking.endTime.substring(0, 16) : '',
-        userName: booking.userName || userName
+        userName: booking.userName || userName,
+        participants: (booking.participants || []).join(', ')
     };
 
     const [formData, setFormData] = useState(initialFormData);
-    const { loadingStatus: bookingsLoading, error: bookingsError } = useSelector(state => state.bookings);
+    const { loadingStatus: bookingsLoadingStatus, error: bookingsError } = useSelector(state => state.bookings);
+    const loading = bookingsLoadingStatus === 'loading';
 
     useEffect(() => {
-        if (open) {
-            setFormData(initialFormData);
-        }
-    }, [booking, roomId, open]);
+        setFormData(initialFormData);
+    }, [booking, open, roomId, userName]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (bookingsLoading === 'loading') return;
+        if (loading) return;
 
-        if (new Date(formData.endTime) <= new Date(formData.startTime)) {
-            alert("Помилка: Час завершення має бути пізніше часу початку.");
-            return;
+        if (isNew || isAdmin) {
+            if (new Date(formData.startTime) >= new Date(formData.endTime)) {
+                alert('Час початку має бути раніше часу закінчення.');
+                return;
+            }
         }
+
+        const participantsArray = formData.participants
+            .split(',')
+            .map(email => email.trim())
+            .filter(email => email !== '');
 
         const bookingData = {
             ...formData,
             startTime: formData.startTime + ':00',
             endTime: formData.endTime + ':00',
+            participants: participantsArray,
         };
 
         if (isNew) {
@@ -64,156 +76,139 @@ function BookingFormDialog({ open, handleClose, booking, roomId, userName }) {
         } else {
             dispatch(updateBooking({ ...bookingData, id: booking.id }));
         }
-    };
 
-    useEffect(() => {
-        if (bookingsLoading === 'succeeded' && !bookingsError) {
-            if (open) {
-                handleClose();
-            }
-        }
-    }, [bookingsLoading, bookingsError]);
+        handleClose();
+    };
 
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{isNew ? 'Створити Нове Бронювання' : 'Редагувати Бронювання'}</DialogTitle>
+            <DialogTitle>{isNew ? 'Створити Бронювання' : 'Редагувати Бронювання'}</DialogTitle>
             <DialogContent dividers>
-                {bookingsError && (
-                    <Alert severity="error" className="mb-4">
-                        {bookingsError}
-                    </Alert>
-                )}
+                {bookingsError && <Alert severity="error" className="mb-4">{bookingsError}</Alert>}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <TextField
-                        label="Кімната ID"
-                        variant="outlined"
-                        fullWidth
-                        disabled
-                        value={formData.roomId}
-                        name="roomId"
-                    />
-                    <TextField
-                        label="Назва/Тема зустрічі"
+                        label="Назва Зустрічі"
                         variant="outlined"
                         fullWidth
                         required
                         name="title"
                         value={formData.title}
                         onChange={handleChange}
+                        disabled={loading || (!isNew && !isAdmin)}
                     />
                     <TextField
                         label="Опис"
                         variant="outlined"
                         fullWidth
                         multiline
-                        rows={3}
+                        rows={2}
                         name="description"
                         value={formData.description}
                         onChange={handleChange}
+                        disabled={loading || (!isNew && !isAdmin)}
                     />
                     <TextField
                         label="Початок"
-                        variant="outlined"
+                        type="datetime-local"
                         fullWidth
                         required
-                        type="datetime-local"
                         name="startTime"
                         value={formData.startTime}
                         onChange={handleChange}
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
+                        InputLabelProps={{ shrink: true }}
+                        disabled={loading || (!isNew && !isAdmin)}
                     />
                     <TextField
-                        label="Кінець"
-                        variant="outlined"
+                        label="Закінчення"
+                        type="datetime-local"
                         fullWidth
                         required
-                        type="datetime-local"
                         name="endTime"
                         value={formData.endTime}
                         onChange={handleChange}
-                        InputLabelProps={{
-                            shrink: true,
-                        }}
+                        InputLabelProps={{ shrink: true }}
+                        disabled={loading || (!isNew && !isAdmin)}
                     />
                     <TextField
-                        label="Користувач"
+                        label="Користувач (Автор)"
                         variant="outlined"
                         fullWidth
-                        disabled
+                        required
                         name="userName"
                         value={formData.userName}
+                        onChange={handleChange}
+                        disabled
+                    />
+                    <TextField
+                        label="Учасники (email через кому)"
+                        variant="outlined"
+                        fullWidth
+                        name="participants"
+                        value={formData.participants}
+                        onChange={handleChange}
+                        helperText="Введіть email'и учасників через кому (наприклад: user@app.com, another@user.com). Натисніть 'Зберегти', щоб долучитися."
+                        disabled={loading || !user}
                     />
                 </form>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} color="error" disabled={bookingsLoading === 'loading'}>
+                <Button onClick={handleClose} color="secondary" disabled={loading}>
                     Скасувати
                 </Button>
                 <Button
                     onClick={handleSubmit}
                     color="primary"
                     variant="contained"
-                    disabled={bookingsLoading === 'loading'}
+                    disabled={loading || (!isNew && !user)}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 >
-                    {bookingsLoading === 'loading' ? (
-                        <CircularProgress size={24} color="inherit" />
-                    ) : (
-                        isNew ? 'Створити' : 'Зберегти'
-                    )}
+                    {isNew ? 'Створити' : 'Зберегти'}
                 </Button>
             </DialogActions>
         </Dialog>
     );
 }
 
-const RoomFormDialog = ({ open, handleClose, room }) => {
+function RoomFormDialog({ open, handleClose, room }) {
     const dispatch = useDispatch();
     const isNew = !room.id;
-    const initialFormData = room.id ? room : initialRoomState;
+    const initialFormData = {
+        name: room.name || '',
+        description: room.description || '',
+        capacity: room.capacity || '',
+    };
     const [formData, setFormData] = useState(initialFormData);
-    const { loadingStatus: roomLoading, error: roomError } = useSelector(state => state.rooms);
+    const { loadingStatus: roomsLoadingStatus, error: roomsError } = useSelector(state => state.rooms);
+    const loading = roomsLoadingStatus === 'loading';
 
     useEffect(() => {
-        if (open) {
-            setFormData(initialFormData);
-        }
+        setFormData(initialFormData);
     }, [room, open]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (roomLoading === 'loading') return;
-
-        const roomData = {
-            ...formData,
-            capacity: Number(formData.capacity) || 0,
-        };
+        if (loading) return;
 
         if (isNew) {
-            dispatch(createRoom(roomData));
+            dispatch(createRoom(formData));
         } else {
-            dispatch(updateRoom(roomData));
+            dispatch(updateRoom({ ...formData, id: room.id }));
         }
+
+        handleClose();
     };
-
-    useEffect(() => {
-        if (roomLoading === 'succeeded' && open && !roomError) {
-            handleClose();
-        }
-    }, [roomLoading, roomError]);
-
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{isNew ? 'Створити Нову Кімнату' : 'Редагувати Кімнату'}</DialogTitle>
+            <DialogTitle>{isNew ? 'Створити Кімнату' : 'Редагувати Кімнату'}</DialogTitle>
             <DialogContent dividers>
-                {roomError && <Alert severity="error" className="mb-4">{roomError}</Alert>}
+                {roomsError && <Alert severity="error" className="mb-4">{roomsError}</Alert>}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <TextField
                         label="Назва Кімнати"
@@ -229,7 +224,7 @@ const RoomFormDialog = ({ open, handleClose, room }) => {
                         variant="outlined"
                         fullWidth
                         multiline
-                        rows={3}
+                        rows={2}
                         name="description"
                         value={formData.description}
                         onChange={handleChange}
@@ -247,40 +242,44 @@ const RoomFormDialog = ({ open, handleClose, room }) => {
                 </form>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} color="error" disabled={roomLoading === 'loading'}>
+                <Button onClick={handleClose} color="secondary" disabled={loading}>
                     Скасувати
                 </Button>
                 <Button
                     onClick={handleSubmit}
                     color="primary"
                     variant="contained"
-                    disabled={roomLoading === 'loading'}
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
                 >
-                    {roomLoading === 'loading' ? (
-                        <CircularProgress size={24} color="inherit" />
-                    ) : (
-                        isNew ? 'Створити' : 'Зберегти'
-                    )}
+                    {isNew ? 'Створити' : 'Зберегти'}
                 </Button>
             </DialogActions>
         </Dialog>
     );
-};
+}
 
 export default function MeetingRoomsDashboard() {
     const dispatch = useDispatch();
-    const { rooms, loadingStatus: roomsLoading } = useSelector(state => state.rooms);
-    const { bookings, loadingStatus: bookingsLoading, error: bookingsError } = useSelector(state => state.bookings);
-    const { user } = useSelector(state => state.auth);
+    const { rooms, loadingStatus: roomsLoadingStatus, error: roomsError } = useSelector(state => state.rooms);
+    const { bookings, loadingStatus: bookingsLoadingStatus, error: bookingsError } = useSelector(state => state.bookings);
+    // 👈 Отримання даних користувача та ролі
+    const { user, loadingStatus: authLoadingStatus } = useSelector(state => state.auth);
+    const isAdmin = user?.role === 'Admin'; // 👈 Перевірка на Admin
 
-    // Стан для діалогу кімнат
     const [openRoomDialog, setOpenRoomDialog] = useState(false);
-    const [currentRoom, setCurrentRoom] = useState(initialRoomState);
-
-    // Стан для діалогу бронювань
+    const [currentRoom, setCurrentRoom] = useState(null);
     const [openBookingDialog, setOpenBookingDialog] = useState(false);
-    const [currentBooking, setCurrentBooking] = useState(initialBookingState);
+    const [currentBooking, setCurrentBooking] = useState(null);
     const [targetRoomId, setTargetRoomId] = useState(null);
+
+    const canManageBooking = (booking) => {
+        if (!user) return false;
+
+        if (isAdmin) return true;
+
+        return false;
+    };
 
     useEffect(() => {
         dispatch(fetchRooms());
@@ -288,7 +287,7 @@ export default function MeetingRoomsDashboard() {
     }, [dispatch]);
 
     const handleOpenCreateRoom = () => {
-        setCurrentRoom(initialRoomState);
+        setCurrentRoom(null);
         setOpenRoomDialog(true);
     };
 
@@ -297,20 +296,19 @@ export default function MeetingRoomsDashboard() {
         setOpenRoomDialog(true);
     };
 
+    const handleCloseRoomDialog = () => {
+        setOpenRoomDialog(false);
+        setCurrentRoom(null);
+    };
+
     const handleDeleteRoom = (id) => {
-        if (window.confirm('Ви впевнені, що хочете видалити цю кімнату та всі її бронювання?')) {
+        if (window.confirm('Ви впевнені, що хочете видалити цю кімнату?')) {
             dispatch(deleteRoom(id));
         }
     };
 
-    const handleCloseRoomDialog = () => {
-        setOpenRoomDialog(false);
-        setCurrentRoom(initialRoomState);
-    };
-
-
     const handleOpenCreateBooking = (roomId) => {
-        setCurrentBooking(initialBookingState);
+        setCurrentBooking(null);
         setTargetRoomId(roomId);
         setOpenBookingDialog(true);
     };
@@ -321,145 +319,150 @@ export default function MeetingRoomsDashboard() {
         setOpenBookingDialog(true);
     };
 
+    const handleCloseBookingDialog = () => {
+        setOpenBookingDialog(false);
+        setCurrentBooking(null);
+        setTargetRoomId(null);
+    };
+
     const handleDeleteBooking = (id) => {
         if (window.confirm('Ви впевнені, що хочете скасувати це бронювання?')) {
             dispatch(deleteBooking(id));
         }
     };
 
-    const handleCloseBookingDialog = () => {
-        setOpenBookingDialog(false);
-        setCurrentBooking(initialBookingState);
-        setTargetRoomId(null);
-    };
-
-
-    const overallLoading = roomsLoading === 'loading' || bookingsLoading === 'loading';
-
-    const bookingsByRoom = rooms.reduce((acc, room) => {
-        acc[room.id] = bookings.filter(b => b.roomId === room.id);
-        return acc;
-    }, {});
-
+    const overallLoading = roomsLoadingStatus === 'loading' || bookingsLoadingStatus === 'loading' || authLoadingStatus === 'loading';
 
     return (
-        <Container maxWidth="lg" className="py-8">
+        <Container component="main" maxWidth="xl" className="mt-10 p-6">
             <Box className="flex justify-between items-center mb-6">
                 <Typography variant="h4" component="h1" className="text-gray-800">
                     Панель Керування Кімнатами
                 </Typography>
+                {/* 👈 Обмеження для Admin */}
                 <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
                     onClick={handleOpenCreateRoom}
-                    disabled={overallLoading}
+                    disabled={overallLoading || !isAdmin} // Тільки Admin може створювати кімнати
                 >
                     Додати Кімнату
                 </Button>
             </Box>
 
-            {overallLoading && <Alert severity="info" className="mb-4">Завантаження даних...</Alert>}
-            {bookingsError && <Alert severity="error" className="mb-4">Помилка бронювання: {bookingsError}</Alert>}
+            {(roomsError || bookingsError) && <Alert severity="error" className="mb-6">Помилка: {roomsError || bookingsError}</Alert>}
+
+            {overallLoading && (
+                <Box className="flex justify-center items-center py-10">
+                    <CircularProgress />
+                    <Typography variant="h6" className="ml-3">Завантаження даних...</Typography>
+                </Box>
+            )}
 
             <Grid container spacing={4}>
                 {rooms.map((room) => {
-                    const roomBookings = bookingsByRoom[room.id] || [];
-
+                    const roomBookings = bookings.filter(b => b.roomId === room.id);
                     return (
-                        <Grid xs={12} sm={6} md={4} key={room.id}>
+                        <Grid item key={room.id} xs={12} md={6} lg={4}>
                             <Paper elevation={3} className="p-4 flex flex-col h-full">
-                                <Typography variant="h5" component="h2" className="text-blue-600 mb-2">
-                                    {room.name}
-                                </Typography>
-                                <Typography variant="body2" color="textSecondary" className="mb-2">
-                                    {room.description}
-                                </Typography>
-                                <Typography variant="body1" className="mb-4 font-semibold">
-                                    Місткість: {room.capacity} місць
-                                </Typography>
-
-                                <Box className="flex justify-between items-center mb-4">
-                                    <Typography variant="subtitle1" className="text-gray-700 font-bold">
-                                        Бронювання:
+                                <Box className="flex-grow">
+                                    <Typography variant="h5" component="h2" className="text-blue-700 mb-2 font-semibold">
+                                        {room.name}
                                     </Typography>
+                                    <Typography variant="body1" className="text-gray-600 mb-2">
+                                        {room.description}
+                                    </Typography>
+                                    <Typography variant="body2" color="textSecondary" className="mb-4">
+                                        Місткість: {room.capacity}
+                                    </Typography>
+
+                                    <Typography variant="h6" className="text-gray-700 mt-4 mb-2 border-t pt-2">
+                                        Бронювання
+                                    </Typography>
+
+                                    <Box className="space-y-2">
+                                        {roomBookings.length > 0 ? (
+                                            roomBookings.map((booking) => {
+                                                const manageAllowed = canManageBooking(booking);
+                                                const canEditForParticipation = !!user;
+
+                                                return (
+                                                    <Paper key={booking.id} elevation={1} className="p-3 bg-gray-50">
+                                                        <Typography variant="subtitle1" className="font-medium text-sm">
+                                                            {booking.title}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="textSecondary" className="text-xs">
+                                                            {formatDateTime(booking.startTime)} - {formatDateTime(booking.endTime)}
+                                                        </Typography>
+                                                        <Typography variant="body2" color="textSecondary" className="text-xs">
+                                                            Автор: {booking.userName}
+                                                        </Typography>
+                                                        {/* 👈 Відображення учасників */}
+                                                        <Typography variant="body2" color="textSecondary" className="text-xs mt-1">
+                                                            Учасники: {booking.participants && booking.participants.length > 0 ? booking.participants.join(', ') : 'Немає'}
+                                                        </Typography>
+
+                                                        <Box className="flex justify-end space-x-2 mt-2">
+                                                            <Button
+                                                                size="small"
+                                                                color="info"
+                                                                onClick={() => handleOpenEditBooking(booking)}
+                                                                disabled={overallLoading || !canEditForParticipation}
+                                                            >
+                                                                Ред.
+                                                            </Button>
+                                                            <Button
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => handleDeleteBooking(booking.id)}
+                                                                disabled={overallLoading || !manageAllowed}
+                                                            >
+                                                                Скасувати
+                                                            </Button>
+                                                        </Box>
+                                                    </Paper>
+                                                );
+                                            })
+                                        ) : (
+                                            <Typography variant="body2" color="textSecondary">
+                                                Немає активних бронювань.
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                <Box className="flex justify-between mt-4 pt-4 border-t border-gray-200">
                                     <Button
+                                        variant="outlined"
+                                        color="primary"
                                         size="small"
-                                        variant="contained"
-                                        color="success"
                                         startIcon={<AddIcon />}
                                         onClick={() => handleOpenCreateBooking(room.id)}
-                                        disabled={overallLoading}
+                                        disabled={overallLoading || !user}
                                     >
-                                        Забронювати
+                                        Бронювати
                                     </Button>
-                                </Box>
-
-                                <Box className="flex-grow space-y-3 mb-4">
-                                    {roomBookings.length > 0 ? (
-                                        roomBookings
-                                            .filter(b => new Date(b.endTime) > new Date()) // Показуємо лише майбутні
-                                            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime)) // Сортуємо за часом
-                                            .slice(0, 3) // Показуємо лише 3 найближчі
-                                            .map((booking) => (
-                                                <Paper key={booking.id} elevation={1} className="p-3 bg-gray-50">
-                                                    <Typography variant="body2" className="font-semibold text-gray-800">
-                                                        {booking.title}
-                                                    </Typography>
-                                                    <Typography className="text-xs text-gray-500 my-1">
-                                                        {formatDateTime(booking.startTime)}
-                                                    </Typography>
-                                                    <Box className="flex justify-end space-x-2 mt-2">
-                                                        <Button
-                                                            size="small"
-                                                            color="info"
-                                                            onClick={() => handleOpenEditBooking(booking)}
-                                                            disabled={overallLoading}
-                                                        >
-                                                            Ред.
-                                                        </Button>
-                                                        <Button
-                                                            size="small"
-                                                            color="error"
-                                                            onClick={() => handleDeleteBooking(booking.id)}
-                                                            disabled={overallLoading}
-                                                        >
-                                                            Скасувати
-                                                        </Button>
-                                                    </Box>
-                                                </Paper>
-                                            ))
-                                    ) : (
-                                        <Typography variant="body2" color="textSecondary">
-                                            Наразі майбутніх бронювань немає.
-                                        </Typography>
-                                    )}
-                                    {roomBookings.length > 3 && (
-                                        <Typography variant="body2" color="primary" className="text-right">
-                                            та ще {roomBookings.length - 3}...
-                                        </Typography>
-                                    )}
-                                </Box>
-
-                                <Box className="flex justify-between mt-auto pt-4 border-t border-gray-200">
-                                    <Button
-                                        size="small"
-                                        color="primary"
-                                        startIcon={<EditIcon />}
-                                        onClick={() => handleOpenEditRoom(room)}
-                                        disabled={overallLoading}
-                                    >
-                                        Редагувати
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        color="error"
-                                        startIcon={<DeleteIcon />}
-                                        onClick={() => handleDeleteRoom(room.id)}
-                                        disabled={overallLoading}
-                                    >
-                                        Видалити
-                                    </Button>
+                                    <Box className="flex space-x-2">
+                                        <Button
+                                            size="small"
+                                            color="info"
+                                            startIcon={<EditIcon />}
+                                            onClick={() => handleOpenEditRoom(room)}
+                                            disabled={overallLoading || !isAdmin} // Тільки Admin
+                                        >
+                                            Редагувати
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            startIcon={<DeleteIcon />}
+                                            onClick={() => handleDeleteRoom(room.id)}
+                                            disabled={overallLoading || !isAdmin}
+                                        >
+                                            Видалити
+                                        </Button>
+                                    </Box>
                                 </Box>
                             </Paper>
                         </Grid>

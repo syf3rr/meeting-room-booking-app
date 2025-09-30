@@ -1,66 +1,80 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-//jwt
-const MOCK_TOKEN = "mocked-jwt-token-12345-for-auth";
+const USERS_STORAGE_KEY = 'meeting_app_users';
+
+const MOCK_ADMIN_USER = { name: 'Адміністратор', email: 'admin@app.com', password: '123456', role: 'Admin' };
+const MOCK_DEFAULT_USER = { name: 'Звичайний Користувач', email: 'user@app.com', password: '123456', role: 'User' };
+
+const loadUsers = () => {
+    try {
+        const serializedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+        if (serializedUsers === null) {
+            return [MOCK_ADMIN_USER, MOCK_DEFAULT_USER];
+        }
+        return JSON.parse(serializedUsers);
+    } catch (e) {
+        console.warn("Could not load users from localStorage:", e);
+        return [MOCK_ADMIN_USER, MOCK_DEFAULT_USER];
+    }
+};
+
+const saveUsers = (users) => {
+    try {
+        const serializedUsers = JSON.stringify(users);
+        localStorage.setItem(USERS_STORAGE_KEY, serializedUsers);
+    } catch (e) {
+        console.error("Could not save users to localStorage:", e);
+    }
+};
 
 const mockLogin = async ({ email, password }) => {
-    //запит
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    console.log("Отримані дані:", { email, password });
-    console.log("Очікувані дані:", { email: "test@app.com", password: "123456" });
+    const users = loadUsers();
+    const foundUser = users.find(u => u.email === email && u.password === password);
 
-    //перевірка даних
-    if (email === "test@app.com" && password === "123456") {
-        //якщо відповідь успішна
-        return {
-            token: MOCK_TOKEN,
-            user: {
-                name: 'Тестовий Користувач',
-                email,
-                role: 'Employee'
-            }
-        }
-        //якщо відповідь провальна
-    } else {
-        throw new Error("Невірний email або пароль.");
+    if (foundUser) {
+        const token = `mocked-jwt-${foundUser.email}`;
+        const { password: _, ...userWithoutPassword } = foundUser;
+        return { token, user: userWithoutPassword };
     }
+
+    throw new Error("Невірний email або пароль.");
 };
 
 const mockRegister = async (userData) => {
-    //перевірка на унікальність
     await new Promise(resolve => setTimeout(resolve, 1500));
-    if (userData.email === "test@app.com") {
-        throw new Error("Користувач з таким email вже існує.");
+
+    const users = loadUsers();
+
+    if (users.some(u => u.email === userData.email)) {
+        throw new Error("Користувач з цим email вже існує. Спробуйте інший email.");
     }
 
-    //успішна реєстрація
+    const newUser = {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        role: 'User'
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    const { password: _, ...userWithoutPassword } = newUser;
     return {
-        message: "Користувач успішно зареєстрований!",
-        //віддаємо токен зразу для зручності
-        token: MOCK_TOKEN + "-new",
-        user: {
-            name: userData.name,
-            email: userData.email,
-            role: 'Employee'
-        }
+        token: `mocked-jwt-${newUser.email}`,
+        user: userWithoutPassword
     };
 };
 
-export const loginUser = createAsyncThunk(
-    'auth/login',
-    mockLogin
-);
-
-export const registerUser = createAsyncThunk(
-    'auth/register',
-    mockRegister
-);
+export const loginUser = createAsyncThunk('auth/loginUser', mockLogin);
+export const registerUser = createAsyncThunk('auth/registerUser', mockRegister);
 
 const initialState = {
-    token: localStorage.getItem('authToken') || null,
     user: null,
-    isLoggedIn: !!localStorage.getItem('authToken'),
+    token: null,
+    isLoggedIn: false,
     loadingStatus: 'idle',
     error: null,
 };
@@ -71,17 +85,29 @@ const authSlice = createSlice({
     reducers: {
         logout: (state) => {
             localStorage.removeItem('authToken');
-            state.token = null;
             state.user = null;
+            state.token = null;
             state.isLoggedIn = false;
             state.loadingStatus = 'idle';
             state.error = null;
         },
-        //відновлення стану після перезагрузки
-        setAuthFromStorage: (state, action) => {
-            state.token = action.payload.token;
-            state.user = { name: 'Тестовий користувач', email: 'test@app.com', role: 'Employee' };
-            state.isLoggedIn = true;
+        setAuthFromStorage: (state) => {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                state.token = token;
+                state.isLoggedIn = true;
+
+                const users = loadUsers();
+                const userEmail = token.replace('mocked-jwt-', '');
+                const foundUser = users.find(u => u.email === userEmail);
+
+                if (foundUser) {
+                    const { password: _, ...userWithoutPassword } = foundUser;
+                    state.user = userWithoutPassword;
+                } else {
+                    state.user = { name: 'Невідомий', email: userEmail, role: 'User' };
+                }
+            }
         }
     },
     extraReducers: (builder) => {
@@ -106,7 +132,7 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(registerUser.fulfilled, (state, action) => {
-                localStorage.setItem('authToken', action.payload.token); // Одразу входимо
+                localStorage.setItem('authToken', action.payload.token);
                 state.token = action.payload.token;
                 state.user = action.payload.user;
                 state.isLoggedIn = true;
