@@ -14,48 +14,42 @@ const initialState = {
     error: null,
 };
 
-//створення кімнати
+export const fetchRooms = createAsyncThunk(
+    'rooms/fetchRooms',
+    async () => {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Імітація затримки
+        return initialRooms;
+    }
+);
+
 export const createRoom = createAsyncThunk(
     'rooms/createRoom',
-    async (roomData, { rejectWithValue }) => {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Імітація затримки
-
-        //нова кімната з унікальним айді
+    async (roomData) => {
+        await new Promise(resolve => setTimeout(resolve, 500));
         const newRoom = {
             id: 'r' + nextRoomId++,
             ...roomData,
             capacity: Number(roomData.capacity) || 0,
         };
-
-        console.log("Створено нову кімнату:", newRoom);
         return newRoom;
     }
 );
 
-//редагування
 export const updateRoom = createAsyncThunk(
     'rooms/updateRoom',
     async (roomData, { rejectWithValue }) => {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Імітація затримки
-
-        //перевірка наявності айді
+        await new Promise(resolve => setTimeout(resolve, 500));
         if (!roomData.id) {
             return rejectWithValue("Не вдалося знайти ID кімнати для оновлення.");
         }
-
-        console.log(`Оновлено кімнату ${roomData.id} з даними:`, roomData);
         return { ...roomData, capacity: Number(roomData.capacity) || 0 };
     }
 );
 
-//видалення кімнати
 export const deleteRoom = createAsyncThunk(
     'rooms/deleteRoom',
-    async (roomId, { rejectWithValue }) => {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Імітація затримки
-
-        //повернення айді видаленої кімнати
-        console.log("Видалено кімнату з ID:", roomId);
+    async (roomId) => {
+        await new Promise(resolve => setTimeout(resolve, 500));
         return roomId;
     }
 );
@@ -66,38 +60,31 @@ const roomsSlice = createSlice({
     reducers: {},
     extraReducers: (builder) => {
         builder
-            //створення
+            .addCase(fetchRooms.fulfilled, (state, action) => {
+                state.rooms = action.payload;
+                state.loadingStatus = 'succeeded';
+            })
             .addCase(createRoom.fulfilled, (state, action) => {
                 state.rooms.push(action.payload);
                 state.loadingStatus = 'succeeded';
             })
-            .addCase(createRoom.pending, (state) => {
-                state.loadingStatus = 'loading';
-                state.error = null;
-            })
-
-            //редагування
             .addCase(updateRoom.fulfilled, (state, action) => {
                 const index = state.rooms.findIndex(r => r.id === action.payload.id);
                 if (index !== -1) {
-                    state.rooms[index] = action.payload; // Замінюємо оновленими даними
+                    state.rooms[index] = action.payload;
                 }
                 state.loadingStatus = 'succeeded';
             })
-
-            //видалення
             .addCase(deleteRoom.fulfilled, (state, action) => {
                 state.rooms = state.rooms.filter(room => room.id !== action.payload);
                 state.loadingStatus = 'succeeded';
             })
-
-            //обробка помилок та звантажень
             .addMatcher(
-                (action) => action.type.endsWith('/pending'),
+                (action) => action.type.startsWith('rooms/') && action.type.endsWith('/pending'),
                 (state) => { state.loadingStatus = 'loading'; state.error = null; }
             )
             .addMatcher(
-                (action) => action.type.endsWith('/rejected'),
+                (action) => action.type.startsWith('rooms/') && action.type.endsWith('/rejected'),
                 (state, action) => {
                     state.loadingStatus = 'failed';
                     state.error = action.error.message || action.payload || 'Операція не вдалася';

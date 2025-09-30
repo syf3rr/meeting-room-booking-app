@@ -80,7 +80,7 @@ const authSlice = createSlice({
         //відновлення стану після перезагрузки
         setAuthFromStorage: (state, action) => {
             state.token = action.payload.token;
-            state.user = { name: 'Відновлена Сесія', email: 'session@app.com', role: 'Employee' };
+            state.user = { name: 'Тестовий користувач', email: 'test@app.com', role: 'Employee' };
             state.isLoggedIn = true;
         }
     },
