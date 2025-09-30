@@ -55,7 +55,7 @@ const mockRegister = async (userData) => {
         name: userData.name,
         email: userData.email,
         password: userData.password,
-        role: 'User'
+        role: userData.role || 'User'
     };
 
     users.push(newUser);

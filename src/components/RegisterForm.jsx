@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { registerUser } from '../redux/auth/authSlice';
-import { TextField, Button, Typography, Container, Alert, CircularProgress } from '@mui/material';
+import {
+    TextField, Button, Typography, Container, Alert, CircularProgress,
+    FormControlLabel, Checkbox, Box
+} from '@mui/material';
 
 export default function RegisterForm() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
+
     const dispatch = useDispatch();
     const { loadingStatus, error } = useSelector(state => state.auth);
 
@@ -20,7 +25,9 @@ export default function RegisterForm() {
             return;
         }
 
-        dispatch(registerUser({ name, email, password }));
+        const role = isAdmin ? 'Admin' : 'User';
+
+        dispatch(registerUser({ name, email, password, role }));
     };
 
     return (
@@ -34,7 +41,7 @@ export default function RegisterForm() {
 
                 <form className="w-full space-y-4" onSubmit={handleSubmit}>
                     <TextField
-                        label="Ім'я"
+                        label="Ваше Ім'я"
                         variant="outlined"
                         fullWidth
                         required
@@ -68,6 +75,20 @@ export default function RegisterForm() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         type="password"
                     />
+
+                    <Box className="flex justify-start w-full">
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={isAdmin}
+                                    onChange={(e) => setIsAdmin(e.target.checked)}
+                                    color="primary"
+                                />
+                            }
+                            label="Зареєструвати як Адміністратора"
+                        />
+                    </Box>
+
                     <Button
                         type="submit"
                         fullWidth

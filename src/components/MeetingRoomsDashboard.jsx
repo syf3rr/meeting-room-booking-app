@@ -263,9 +263,8 @@ export default function MeetingRoomsDashboard() {
     const dispatch = useDispatch();
     const { rooms, loadingStatus: roomsLoadingStatus, error: roomsError } = useSelector(state => state.rooms);
     const { bookings, loadingStatus: bookingsLoadingStatus, error: bookingsError } = useSelector(state => state.bookings);
-    // 👈 Отримання даних користувача та ролі
     const { user, loadingStatus: authLoadingStatus } = useSelector(state => state.auth);
-    const isAdmin = user?.role === 'Admin'; // 👈 Перевірка на Admin
+    const isAdmin = user?.role === 'Admin';
 
     const [openRoomDialog, setOpenRoomDialog] = useState(false);
     const [currentRoom, setCurrentRoom] = useState(null);
@@ -275,9 +274,7 @@ export default function MeetingRoomsDashboard() {
 
     const canManageBooking = (booking) => {
         if (!user) return false;
-
         if (isAdmin) return true;
-
         return false;
     };
 
@@ -286,6 +283,7 @@ export default function MeetingRoomsDashboard() {
         dispatch(fetchBookings());
     }, [dispatch]);
 
+    // Room handlers
     const handleOpenCreateRoom = () => {
         setCurrentRoom(null);
         setOpenRoomDialog(true);
@@ -339,13 +337,12 @@ export default function MeetingRoomsDashboard() {
                 <Typography variant="h4" component="h1" className="text-gray-800">
                     Панель Керування Кімнатами
                 </Typography>
-                {/* 👈 Обмеження для Admin */}
                 <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
                     onClick={handleOpenCreateRoom}
-                    disabled={overallLoading || !isAdmin} // Тільки Admin може створювати кімнати
+                    disabled={overallLoading || !isAdmin}
                 >
                     Додати Кімнату
                 </Button>
@@ -398,7 +395,6 @@ export default function MeetingRoomsDashboard() {
                                                         <Typography variant="body2" color="textSecondary" className="text-xs">
                                                             Автор: {booking.userName}
                                                         </Typography>
-                                                        {/* 👈 Відображення учасників */}
                                                         <Typography variant="body2" color="textSecondary" className="text-xs mt-1">
                                                             Учасники: {booking.participants && booking.participants.length > 0 ? booking.participants.join(', ') : 'Немає'}
                                                         </Typography>
@@ -449,7 +445,7 @@ export default function MeetingRoomsDashboard() {
                                             color="info"
                                             startIcon={<EditIcon />}
                                             onClick={() => handleOpenEditRoom(room)}
-                                            disabled={overallLoading || !isAdmin} // Тільки Admin
+                                            disabled={overallLoading || !isAdmin}
                                         >
                                             Редагувати
                                         </Button>

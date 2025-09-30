@@ -75,7 +75,7 @@ export const deleteBooking = createAsyncThunk(
         const updatedBookings = bookings.filter(b => b.id !== bookingId);
 
         if (updatedBookings.length < bookings.length) {
-            saveBookings(updatedBookings); // Зберігаємо
+            saveBookings(updatedBookings);
             return bookingId;
         }
         throw new Error('Бронювання не знайдено.');
